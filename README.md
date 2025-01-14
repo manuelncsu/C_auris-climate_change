@@ -1,6 +1,6 @@
 This repository is part of the following project:
 
-Project title: Genomic Dynamics of The Emergent Candida auris: Exploring Climate-Dependent Trends
+Project title: **Genomic Dynamics of The Emergent Candida auris: Exploring Climate-Dependent Trends**
 
 Authors: Manuel Jara1*, Alba Frias-De-Diego1, Robert A. Petit III2, Yiqiao Wang1, Maria Frias3, Cristina Lanzas1
 1 Department of Population Health and Pathobiology, College of Veterinary Medicine, North Carolina State University, Raleigh, NC, USA
