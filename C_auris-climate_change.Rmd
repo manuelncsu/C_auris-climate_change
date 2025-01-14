@@ -1,0 +1,164 @@
+---
+title: "C_auris-climate_change"
+author: "Manuel Jara"
+date: "2025-01-14"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+1. Data preparation
+```{r}
+# Load necessary libraries
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# Read the climate data
+climate_data <- read.csv("average_climate_data.csv")
+
+# Read the gene presence data
+gene_presence_data <- read.csv("gene_presence_data.csv")
+
+# Combine both datasets
+combined_data <- gene_presence_data %>%
+  # Join gene presence data with climate data
+  left_join(climate_data, by = "Date") %>%
+  # Remove rows with NA in the climate data or gene presence columns
+  drop_na()
+
+# Print a preview of the combined data
+print(head(combined_data))
+```
+
+
+2. Mixed-effects logistic regression
+```{r}
+# Load necessary library
+library(lme4)
+
+# Standardize the numeric predictor variables
+combined_data <- combined_data %>%
+  mutate(across(c(TAVG, PRCP, AWND, RUNOFF, Date_numeric), scale))
+
+# Fit the model with interaction terms
+mixed_effects_model_interactions <- glmer(TAC1b_K247E ~ TAVG * PRCP * AWND * RUNOFF + 
+                                          Date_numeric + (1 | Date), 
+                                          data = combined_data, 
+                                          family = binomial, 
+                                          na.action = na.omit)
+
+# Extract coefficients summary
+model_summary <- summary(mixed_effects_model_interactions)$coefficients
+
+# Convert to data frame
+model_summary_df <- as.data.frame(model_summary)
+
+# Save the results to a .csv file
+write.csv(model_summary_df, "TAC1b_K247E_mixed_effects_model_interactions_results.csv", row.names = TRUE)
+
+# Print the location of the saved file
+cat("The mixed-effects logistic regression results with interactions have been saved as 'CAT1_mixed_effects_model_interactions_results.csv' in the current working directory.")
+```
+
+3. Visualizations - Improved code to include raw values and CI
+```{r}
+# Load required libraries
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+
+# 1) Merge datasets by 'Date'
+combined_data_raw <- merge(gene_presence_data, climate_data, by = "Date")
+
+# 2) Aggregate data so that each Date has a single row (mean values)
+#    This prevents multiple points per quarter
+combined_data <- combined_data_raw %>%
+  group_by(Date) %>%
+  summarise(
+    TAVG          = mean(TAVG, na.rm = TRUE),      # Temperature
+    TAC1b_A640V   = mean(TAC1b_A640V, na.rm = TRUE) # Gene presence
+  ) %>%
+  ungroup()
+
+# 3) Convert "YYYY-QX" format to a Date using yq() from lubridate
+combined_data <- combined_data %>%
+  mutate(Date = yq(Date))
+
+# 4) Define the variables and scaling factor
+gene_to_plot <- "TAC1b_A640V"  # Updated gene of interest
+climatic_var <- "TAVG"         # Temperature variable
+max_tavg     <- max(combined_data[[climatic_var]], na.rm = TRUE)
+
+# 5) Plot
+ggplot(combined_data, aes(x = Date)) +
+  
+  # (A) Raw data points for the climate variable (TAVG)
+  geom_point(
+    aes(y = !!sym(climatic_var)),
+    color = "#204B53",   # teal color
+    shape = 16,          # circle
+    size = 3,
+    alpha = 1
+  ) +
+  
+  # (B) Smoothed line with CI for TAVG (50% CI, span=0.4)
+  geom_smooth(
+    aes(y = !!sym(climatic_var)),
+    method = "loess",
+    se     = TRUE,
+    level  = 0.50,     # narrower CI (50% instead of default 95%)
+    span   = 0.4,      # tighter smoothing window
+    fill   = "#204B53",
+    color  = "#204B53",
+    alpha  = 0.3
+  ) +
+  
+  # (C) Raw data points for the gene prevalence, scaled to the TAVG axis
+  geom_point(
+    aes(y = as.numeric(!!sym(gene_to_plot)) * max_tavg),
+    color = "#532820",   # brown color
+    shape = 17,          # triangle
+    size = 3,
+    alpha = 1
+  ) +
+  
+  # (D) Smoothed line with CI for gene prevalence (70% CI)
+  geom_smooth(
+    aes(y = as.numeric(!!sym(gene_to_plot)) * max_tavg),
+    method = "loess",
+    se     = TRUE,
+    level  = 0.70,
+    fill   = "#532820",
+    color  = "#532820",
+    alpha  = 0.3
+  ) +
+
+  # 6) Dual y-axes: primary for TAVG, secondary for gene prevalence
+  scale_y_continuous(
+    name = "Temperature (°C)",  # Adjust if you prefer another unit
+    sec.axis = sec_axis(
+      ~ . / max_tavg,
+      name = "Gene prevalence (%)"
+    )
+  ) +
+
+  # 7) Labels and theme
+  labs(
+    title = paste(gene_to_plot, "and", climatic_var),
+    x     = "Date"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.title.y.left  = element_text(color = "#204B53", size = 20),
+    axis.title.y.right = element_text(color = "#532820", size = 20),
+    axis.title.x       = element_text(size = 20),
+    axis.text          = element_text(size = 20),
+    plot.title         = element_text(size = 20, face = "bold"),
+    legend.position    = "none"
+  )
+```
