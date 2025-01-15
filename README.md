@@ -5,7 +5,9 @@ Project title: **Genomic Dynamics of The Emergent Candida auris: Exploring Clima
 Authors: Manuel Jara1*, Alba Frias-De-Diego1, Robert A. Petit III2, Yiqiao Wang1, Maria Frias3, Cristina Lanzas1
 
 1 Department of Population Health and Pathobiology, College of Veterinary Medicine, North Carolina State University, Raleigh, NC, USA
+
 2 Department of Statistics, University of Wyoming, Laramie, Wyoming, USA
+
 3 Escuela Superior de Ciencias Experimentales y Tecnología. Universidad Rey Juan Carlos, Spain
 
 * Correspondence: mjaraja@ncsu.edu
